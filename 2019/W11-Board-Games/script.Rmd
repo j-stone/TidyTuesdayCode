@@ -2,8 +2,8 @@
 title: TidyTuesday - Board Games
 author: James Stone
 date: '2019-03-12'
-editor_options: 
-    chunk_output_type: console
+output:
+    github_document
 ---
     
 ```{r initialisation, include=FALSE}
