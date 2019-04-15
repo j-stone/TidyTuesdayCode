@@ -1,0 +1,291 @@
+---
+title: "Tidy Tuesday - Seattle Bike Counters - Storyboard"
+author: "@jmstone27"
+output: 
+  flexdashboard::flex_dashboard:
+    storyboard: true
+    theme: lumen
+    vertical-fill: scroll
+editor_options: 
+  chunk_output_type: console
+---
+  
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(plotly)
+library(dygraphs)
+library(lubridate)
+library(zoo)
+library(xts)
+library(shiny)
+library(ggiraph)
+library(prophet)
+bike_traffic <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-04-02/bike_traffic.csv")
+extrafont::loadfonts(device="win")
+```
+
+### Let's Begin with a general time-series plot showing bike ridership over the range of dates for which we have data.
+
+```{r date_wrangling}
+bike_traffic = bike_traffic %>% 
+  mutate(
+    date = mdy_hms(date)
+  ) %>% 
+  mutate(
+    month = lubridate::month(date),
+    year = lubridate::year(date)
+  )
+```
+
+```{r}
+my_count = bike_traffic %>% 
+  group_by(month, year) %>% 
+  summarise(
+    total_riders = sum(bike_count, na.rm=T)
+  ) %>% 
+  mutate(
+    date = paste(as.character(month),as.character(year),sep="-")
+  ) %>% 
+  ungroup() %>% 
+  mutate(
+    date = zoo::as.yearmon(date, format = "%m-%Y")
+  ) %>% 
+  select(total_riders,date)
+
+my_count_xts = xts(my_count$total_riders, my_count$date)
+colnames(my_count_xts) = "Total_Riders"
+dygraph(my_count_xts,
+        xlab = "Month-Year",
+        y = "Total Bike Count") %>% 
+  dyRangeSelector() %>% 
+  dyOptions(
+    fillGraph = TRUE,
+    drawGrid = FALSE
+  ) %>% 
+  dyHighlight(
+    highlightCircleSize = 5,
+    highlightSeriesBackgroundAlpha = 0.2
+  )
+```
+
+***
+
+I've used the [dygraphs](http://rstudio.github.io/dygraphs/index.html) package for the time-series plot as it creates no-nonsense interactive time-series plots with very little overhead for the analyst. Once you are familiar with creating the kind of time-series (xts or something that can be coerced to xts) object for the `dygraphs()` function then there is little else you need for a quality plot. 
+
+Seasonal effects are evident in many time-series trends and we would expect such an effect to be particularly strong with this type of activity - and the plot shows this to be true. The peak summer months see 3-4x more riders than the winter counterparts.
+
+### Closer look at seasonal differences
+
+```{r}
+bike_traffic = bike_traffic %>% 
+  mutate(season = ifelse(month %in% c(10,11,12,1,2,3), "Cold-Rainy", "Nice-Sunny")) 
+
+yearly_seasonal = bike_traffic %>% 
+  group_by(year, season) %>% 
+  summarise(total_riders = sum(bike_count, na.rm=T)) %>% 
+  ungroup() %>% 
+  filter(year %in% 2014:2018) %>% # 2013/2019 incomplete data. 
+  spread(season, total_riders)
+
+dygraph(yearly_seasonal,
+        xlab = "Year",
+        ylab = "Rider Count") %>% 
+  dyRangeSelector() %>% 
+  dyOptions(
+    drawGrid = FALSE,
+    colors = c("#42a3ca","#db0f2d")
+  ) %>% 
+  dyHighlight(
+    highlightCircleSize = 5,
+    highlightSeriesBackgroundAlpha = 0.2
+  ) 
+```
+
+*** 
+
+Let's get some actual numbers for this seasonal difference. If we take October - March as 'cold rainy' months in Seattle and then April - September as 'warm sunny' months we can get some exact figures on the discrepancy of ridership between these two periods. 
+
+This is just an alternative way to see the gulf of difference between rider numbers in the winter versus summer months. The data wrangling to get this plot allows us to access the specific numbers though and therefore work with them. 
+
+Also, it may be a reasonable hypothesis to suggest that those who ride in the winter months are doing so out of necessity more often than not and therefore present a baseline of those who are committing to using their bicycle to get to-and-from their workplace. The summer months then brings perhaps some people who are willing to cycle only in those conditions + the large number of people who engage with cycling as a hobby when the weather is good. And this plot perhaps more clearly shows that 2018 showed a stop in the decline of rider numbers in the winter months with a marked increase where as the same year showed a significant drop in the summer months. Therefore there is potentially some positivitity to be derived in terms of those riders who commit to the cycling commute if not in terms of overall numbers more generally. 
+
+### Winter ridership as a proportion of summer ridership
+
+```{r}
+yearly_seasonal = yearly_seasonal %>% 
+  mutate(win_sum_pc = round((`Cold-Rainy` / `Nice-Sunny`)*100, 2))
+
+tags$div( 
+  gauge(value = with(yearly_seasonal, win_sum_pc[year == 2014]),
+      min = 0,
+      max = 100,
+      gaugeSectors(
+        danger = c(0,45),
+        success = c(50,100)
+      ),
+      label = "2014")
+)
+
+tags$div(
+  gauge(value = with(yearly_seasonal, win_sum_pc[year == 2015]),
+      min = 0,
+      max = 100,
+      gaugeSectors(
+        danger = c(0,45),
+        success = c(50,100)
+      ),
+      label = "2015")
+)
+
+tags$div(
+  gauge(value = with(yearly_seasonal, win_sum_pc[year == 2016]),
+      min = 0,
+      max = 100,
+      gaugeSectors(
+        danger = c(0,45),
+        success = c(50,100)
+      ),
+      label = "2016")
+)
+
+tags$div(
+  gauge(value = with(yearly_seasonal, win_sum_pc[year == 2017]),
+      min = 0,
+      max = 100,
+      gaugeSectors(
+        danger = c(0,45),
+        success = c(50,100)
+      ),
+      label = "2017")
+)
+
+tags$div(
+  gauge(value = with(yearly_seasonal, win_sum_pc[year == 2018]),
+      min = 0,
+      max = 100,
+      gaugeSectors(
+        danger = c(0,45),
+        success = c(50,100)
+      ),
+      label = "2018")
+)
+```
+
+*** 
+
+For the five years of which we have 'complete' data these gauges show the proportion of ridership in the cold winter months as a function of the ridership in the nice summer months. 
+
+I just really like how clean look in `flexdashboard` so threw these in despite it being a pretty silly way to show the this changing proportion over time.
+
+`Storyboard` layout in `flexdashboard` is built to display one component per page so you need to be a little bit creative to get more than one component into the page. In this case I just needed to put each `gauge()` call into it's own `<div>` element which can be done in a variety of ways e.g. `HTML()` or `tags$div` from the `shiny` package.
+
+### Bike count by day/season
+
+```{r}
+bike_traffic = bike_traffic %>% 
+  mutate( day = lubridate::wday(date, label = T) )
+
+bydaygg <- ggplot(bike_traffic %>% 
+                    filter(year %in% 2014:2018) %>% 
+  group_by(day, season) %>% 
+  summarise(total_riders = sum(bike_count, na.rm = T)) %>% 
+  ungroup(),
+  aes(x = day, y = total_riders, group = season, color = season)) +
+  geom_line() + 
+  scale_color_manual(values = c("#42a3ca", "#db0f2d")) + 
+  labs(
+    title = "Total Riders by weekday",
+    subtitle = "2014 through 2018",
+    y = "Total Riders"
+  ) + 
+  hrbrthemes::theme_ft_rc() + 
+  theme(
+    text = element_text(family="Comfortaa"),
+    plot.subtitle = element_text(family="Comfortaa"),
+    plot.title = element_text(family="Comfortaa"),
+    axis.title.x = element_text(family="Comfortaa"),
+    axis.title.y = element_text(family="Comfortaa"),
+    axis.text.x = element_text(angle=90)
+  )
+
+bydaygg <- bydaygg + geom_point_interactive(aes(tooltip = total_riders))
+girafe(code = print(bydaygg), width = 0.5)
+```
+
+*** 
+
+Hovering over the points will give the exact values. We do this by using the `ggiraph` package which allows the addition of interactive elements to ggplot objects meaning I can style the plot exactly how I like with my usual ggplot tricks and then add some interactivity on top. Not all that dissimilar from using `ggplotly` to wrap around your ggplot object but I'm liking the `ggiraph` method a little more for basic interactivity at the moment.
+
+### By day/year/season
+
+```{r}
+bydayyeargg <- ggplot(bike_traffic %>% 
+                        filter(year %in% 2014:2018) %>% 
+                        group_by(day,season,year) %>% 
+                        summarise(total_riders = sum(bike_count, na.rm=T)) %>% 
+                        ungroup(),
+                      aes(x = day, y = total_riders, group = as.factor(year), color = as.factor(year))) + 
+  geom_line() + 
+  scale_color_manual(values = c("#42a3ca","#db0f2d","#1d8258","#821d7e","#e2dc18")) + 
+  facet_wrap(~season, ncol=2) + 
+  labs(
+    title = "Total riders by weekday per year",
+    subtitle = "Cold and Rainy versus Nice and Sunny",
+    y = "Total Riders"
+  ) + 
+  guides(colour=guide_legend(title="Year")) + 
+  hrbrthemes::theme_ft_rc() + 
+  theme(
+    text = element_text(family="Comfortaa"),
+    plot.subtitle = element_text(family="Comfortaa"),
+    plot.title = element_text(family="Comfortaa"),
+    axis.title.x = element_text(family="Comfortaa", size=14),
+    axis.title.y = element_text(family="Comfortaa", size=14),
+    axis.text.x = element_text(angle=90),
+    strip.text = element_text(family="Comfortaa")
+  )
+
+girafe(code = print(bydayyeargg + geom_point_interactive(aes(tooltip = total_riders))), width=0.5)
+```
+
+***
+
+It's somewhat interesting that the 2018 data shows such a huge drop-off on all days in the summer months with the exception of Wednesday. This is likely where some domain-specific (or local!) knowledge might be handy to have ideas about why this may be the case. My first thought was that it could be a data logging issue given these counters may just not work at times but that doesn't explain why the malfunctions (whatever they may be) wouldn't be common in summer 2018 except on Wednesdays....
+
+
+
+### Basic Forecasting - Using Prophet
+
+```{r}
+fc <- prophet(bike_traffic %>% 
+                mutate(date = as.Date(date)) %>% 
+                group_by(date) %>% 
+                summarise(totalRiders = sum(bike_count, na.rm=T)) %>% 
+                rename(ds = date,
+                       y = totalRiders) %>% 
+                filter(y < 20000), # exclude the one outlier 30 May 2018 24k
+              daily.seasonality = TRUE)
+fc.pred <- make_future_dataframe(fc, periods = 730)
+
+fc.pred <- predict(fc, fc.pred)
+
+dyplot.prophet(fc, fc.pred)
+```
+
+***
+After wrangling the data to total rider count per day across all crossings I then used the [prophet](https://facebook.github.io/prophet/) package to produce a simple forecast for rider numbers moving forward for the next two years - this take into account daily trends and seasonal trends which we have seen to be of significant impact on these data. 
+
+I was going to flex some ggplot muscle to create a plot to display the results but then I realised that the package includes an in-built function to create a `dygraph` of the data so it would be crazy not to use that. 
+
+The plot shows the actual data points up to Feb 2019 when the data ends along with the smoothed trend line fit by prophet. The trend function then continues two years into the future providing daily predictions for rider numbers. As with the previous dygraphs in this storyboard you can hover over a particular date and see specific predictions.
+
+### Conclusion - Rating Storyboards from flexdashboard out of 10.
+
+```{r}
+valueBox(value=10, icon="fa-bicycle")
+```
+
+***
+
+Despite having to find workarounds for more than one component per page it's still a 10/10. At the end of the day the purpose is for clarity and one component per page makes 100% sense, it's just the fact this was a 'toy' example that I wanted to experiment with the gauges. The fact you can also implement storyboard elements inside one particular page is something I am keen to explore in the future.

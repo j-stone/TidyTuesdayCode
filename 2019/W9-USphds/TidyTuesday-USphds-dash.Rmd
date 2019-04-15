@@ -1,0 +1,301 @@
+---
+title: "Dashboard for Week 9 2019 #TidyTuesday"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    theme: bootstrap
+    source_code: embed
+---
+  
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(collapsibleTree)
+library(formattable)
+```
+
+```{r data, include = FALSE}
+phd_field <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-02-19/phd_by_field.csv")
+
+create_collapsible_tree <- function(phd_field,yr) {
+  phd_field %>%
+    filter(
+      year == yr,
+      !is.na(n_phds)
+    ) %>%
+    collapsibleTreeSummary(
+      hierarchy = c("broad_field", "major_field", "field"),
+      attribute = "n_phds",
+      zoomable = F
+    )
+}
+
+phds_by_broad <- function(phd_field, yr) {
+  phd_field %>%
+    filter(year == yr) %>%
+    replace_na(list(n_phds = 0)) %>%
+    group_by(broad_field) %>%
+    summarise(Total = round(sum(n_phds) / 1000)) %>%
+    rename(`Broad field` = broad_field) %>%
+    arrange(desc(Total)) %>% 
+    formattable(list(
+      Total = color_tile("white", "orange")
+    ))
+}
+
+top_fields <- function(phd_field, yr) {
+  phd_field %>%
+    filter(year == yr) %>%
+    replace_na(list(n_phds = 0)) %>%
+    group_by(field) %>%
+    summarise(Total = sum(n_phds)) %>%
+    top_n(10) %>%
+    arrange(desc(Total)) %>% 
+    formattable(list(
+      Total = color_tile("white", "#56B4E9")
+    ))
+}
+```
+
+2008
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2008)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2008)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2008)
+```
+
+2009
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2009)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2009)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2009)
+```
+
+2010
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2010)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2010)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2010)
+```
+
+2011
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2011)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2011)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2011)
+```
+
+2012
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2012)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2012)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2012)
+```
+
+2013
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2013)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2013)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2013)
+```
+
+2014
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2014)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2014)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2014)
+```
+
+2015
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2015)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2015)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2015)
+```
+
+2016
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2016)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2016)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2016)
+```
+
+2017
+=======================================================================
+
+Row {.tabset .tabset-fade}
+-----------------------------------------------------------------------
+
+### Phd Tree
+
+```{r}
+create_collapsible_tree(phd_field, 2017)
+```
+
+### PhDs by Broad Field (Thousands)
+
+```{r}
+phds_by_broad(phd_field, 2017)
+```
+
+### Top 10
+
+```{r}
+top_fields(phd_field, 2017)
+```
