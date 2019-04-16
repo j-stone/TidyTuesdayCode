@@ -43,7 +43,7 @@ complete.df$numTitles <- unlist(complete.df %>% purrr::pmap(function(agedays,pla
 }))
 )
 
-# 81.14 seconds
+# 67.46 seconds
 # - Certainly a more optimised way to do this, perhaps something to work on.
 
 
@@ -62,24 +62,8 @@ complete.df$numTitles <- unlist(complete.df %>% purrr::pmap(function(agedays,pla
 
 
 ######################################################
-# GIF 1 - Get the top 10 GS winners of all time nd barplot race those 10 players
+# GIF 1 - Get the top 10 GS winners of all time and barplot race those 10 players
 ######################################################
-
-get_top_10_at_age <- function(df,a) {
-  df %>% 
-    filter(agedays == a) %>% 
-    arrange(desc(numTitles)) %>% 
-    top_n(10)
-}
-
-for (i in 1:length(unique(complete.df$agedays))) {
-  dat <- get_top_10_at_age(complete.df,ages[i])
-  if ( i == 1 ) {
-    subset.df <- dat
-  } else {
-    subset.df <- rbind(subset.df, dat)
-  }
-}
 
 top.players <- complete.df %>% 
   group_by(player) %>% 
@@ -116,7 +100,7 @@ plt <- ggplot(data = overall.top.df,
   ) + 
   transition_states(agedays)
 
-anim.plt <- animate(plt, nframes = 1540, fps = 30)
+anim.plt <- animate(plt, nframes = 624, fps = 10)
 
 anim_save(filename = "tt-tennis.gif",
           animation = anim.plt)
